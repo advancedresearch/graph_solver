@@ -93,13 +93,13 @@ fn main() {
             Constraint {edge: BLUE_DASHED, node: WHITE},
         ]
     });
-    g.push_pair((1, 7));
-    g.push_pair((0, 4));
+
+    // Require anticommutativity for every quad.
+    g.commute_quad = Some(false);
 
     let solve_settings = SolveSettings::new(); // .debug(true); // .sleep_ms(1000);
     if let Some(solution) = g.solve(solve_settings) {
         // solution.puzzle.print();
-
         let nodes = &["black,fontcolor=white,label=\"\"", "white,label=\"\""];
         let edges = &[
             "red", "red,style=dashed",

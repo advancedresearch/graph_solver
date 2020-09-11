@@ -129,6 +129,19 @@ pub struct Graph {
     pub meet_quad: bool,
     /// Whether any node can be reached from any other node.
     pub connected: bool,
+    /// Whether commutativity/anticommutativity is enabled for quads.
+    ///
+    /// When a quad commutes, the edges along one dimension have same colors.
+    /// When a quad anticommutes, the edges along one dimension have same colors,
+    /// but with an odd number of positive and negative signs (1+3 or 3+1).
+    ///
+    /// It is assumed that even and odd colors for edges
+    /// above `2` anticommutes, e.g. `2` and `3` anticommutes.
+    ///
+    /// - When set to `Some(true)`, every quad commutes.
+    /// - When set to `Some(false)`, every quad anticommutes.
+    /// - When set to `None`
+    pub commute_quad: Option<bool>,
     cache_has_triangles: std::cell::Cell<bool>,
     cache_upper_triangle_disconnected: std::cell::Cell<bool>,
     cache_node_satisfied: Vec<std::cell::Cell<bool>>,
@@ -175,7 +188,8 @@ impl Puzzle for Graph {
         self.pairs_satisfied() &&
         if self.no_triangles {!self.has_triangles()} else {true} &&
         if self.meet_quad {self.meet_quad_satisfied()} else {true} &&
-        if self.connected {self.is_connected()} else {true}
+        if self.connected {self.is_connected()} else {true} &&
+        if let Some(val) = self.commute_quad {self.commute_quad_satisfied(val)} else {true}
     }
     fn remove(&mut self, other: &Graph) {
         let n = self.nodes.len();
@@ -208,6 +222,7 @@ impl Graph {
             no_triangles: false,
             meet_quad: false,
             connected: false,
+            commute_quad: None,
             cache_has_triangles: std::cell::Cell::new(false),
             cache_upper_triangle_disconnected: std::cell::Cell::new(false),
             cache_node_satisfied: vec![],
@@ -397,6 +412,58 @@ impl Graph {
 
             if !found {
                 return false
+            }
+        }
+        true
+    }
+
+    /// Returns `true` when for any quad,
+    /// the commute property is satisfied.
+    ///
+    /// For more information, see `Graph::commute`.
+    pub fn commute_quad_satisfied(&self, commute: bool) -> bool {
+        let n = self.nodes.len();
+        for i in 0..n {
+            for j in 0..n {
+                if i == j {continue};
+                if self.get((i, j)) < 2 {continue};
+                for k in j+1..n {
+                    if k == i {continue};
+                    if self.get((j, k)) < 2 &&
+                       self.get((i, k)) < 2 {continue};
+                    for k2 in 0..n {
+                        if k2 == i || k2 == j || k2 == k {continue};
+                        if self.get((k, k2)) >= 2 &&
+                           self.get((j, k)) >= 2 &&
+                           self.get((i, k2)) >= 2
+                        {
+                            let s = if commute {
+                                self.get((i, j)) == self.get((k, k2)) &&
+                                self.get((i, k2)) == self.get((j, k))
+                            } else {
+                                let ij = self.get((i, j));
+                                let jk = self.get((j, k));
+                                (ij ^ 1 == self.get((k, k2))) ^
+                                (jk ^ 1 == self.get((i, k2)))
+                            };
+                            if !s {return false}
+                        } else if self.get((k, k2)) >= 2 &&
+                                  self.get((i, k)) >= 2 &&
+                                  self.get((j, k2)) >= 2
+                        {
+                            let s = if commute {
+                                self.get((i, k)) == self.get((j, k2)) &&
+                                self.get((i, j)) == self.get((k, k2))
+                            } else {
+                                let ik = self.get((i, k));
+                                let ij = self.get((i, j));
+                                (ik ^ 1 == self.get((j, k2))) ^
+                                (ij ^ 1 == self.get((k, k2)))
+                            };
+                            if !s {return false}
+                        }
+                    }
+                }
             }
         }
         true
