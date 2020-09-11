@@ -149,14 +149,14 @@ impl Puzzle for Graph {
     }
     fn print(&self) {
         for i in 0..self.nodes.len() {
-            print!("{} ", self.nodes[i].color);
+            eprint!("{} ", self.nodes[i].color);
         }
-        println!("\n========================================");
+        eprintln!("\n========================================");
         for i in 0..self.nodes.len() {
             for j in 0..self.nodes.len() {
-                print!("{} ", self.get((i, j)));
+                eprint!("{} ", self.get((i, j)));
             }
-            println!("");
+            eprintln!("");
         }
     }
     fn solve_simple<F: FnMut(&mut Self, Self::Pos, Self::Val)>(&mut self, mut f: F) {
