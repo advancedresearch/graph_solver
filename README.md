@@ -13,7 +13,7 @@ see [pocket_prover](https://github.com/advancedresearch/pocket_prover)
 ### Motivation
 
 Graph solving is used to find visual representations of various algebras,
-such as [Adinkra diagrams](https://en.wikipedia.org/wiki/Adinkra_symbols_(physics),
+such as [Adinkra diagrams](https://en.wikipedia.org/wiki/Adinkra_symbols_(physics)),
 but where the rules for generating the graphs efficiently is unknown.
 
 ![adinkra](https://raw.githubusercontent.com/advancedresearch/graph_solver/master/images/adinkra.png)
