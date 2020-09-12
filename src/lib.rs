@@ -143,6 +143,7 @@ pub struct Graph {
     /// - When set to `None`
     pub commute_quad: Option<bool>,
     cache_has_triangles: std::cell::Cell<bool>,
+    cache_connected: std::cell::Cell<bool>,
     cache_upper_triangle_disconnected: std::cell::Cell<bool>,
     cache_commute_quad_satisfied: std::cell::Cell<bool>,
     cache_node_satisfied: Vec<std::cell::Cell<bool>>,
@@ -152,12 +153,20 @@ impl Puzzle for Graph {
     type Pos = (usize, usize);
     type Val = Color;
     fn set(&mut self, (i, j): (usize, usize), val: Color) {
+        let old = if j <= i {self.edges[i][j]} else {self.edges[j][i]};
         if j <= i {self.edges[i][j] = val} else {self.edges[j][i] = val}
-        self.cache_has_triangles.set(false);
-        self.cache_upper_triangle_disconnected.set(false);
-        self.cache_commute_quad_satisfied.set(false);
-        self.cache_node_satisfied[i].set(false);
-        self.cache_node_satisfied[j].set(false);
+        if old != 0 && val < 2 {
+            self.cache_connected.set(false);
+            self.cache_upper_triangle_disconnected.set(false);
+        }
+        if !(old == 0 && val == 1) {
+            self.cache_commute_quad_satisfied.set(false);
+        }
+        if old != 0 {
+            self.cache_has_triangles.set(false);
+            self.cache_node_satisfied[i].set(false);
+            self.cache_node_satisfied[j].set(false);
+        }
     }
     fn get(&self, (i, j): (usize, usize)) -> Color {
         if j <= i {self.edges[i][j]} else {self.edges[j][i]}
@@ -226,6 +235,7 @@ impl Graph {
             connected: false,
             commute_quad: None,
             cache_has_triangles: std::cell::Cell::new(false),
+            cache_connected: std::cell::Cell::new(false),
             cache_upper_triangle_disconnected: std::cell::Cell::new(false),
             cache_commute_quad_satisfied: std::cell::Cell::new(false),
             cache_node_satisfied: vec![],
@@ -486,6 +496,7 @@ impl Graph {
 
     /// Returns `true` if all nodes can be reached from any node.
     pub fn is_connected(&self) -> bool {
+        if self.cache_connected.get() {return true};
         let n = self.nodes.len();
         let mut reachable = vec![false; n];
         for i in 0..n {
@@ -509,7 +520,9 @@ impl Graph {
             if !changed {break}
         }
 
-        reachable.iter().all(|&b| b)
+        let val = reachable.iter().all(|&b| b);
+        if val {self.cache_connected.set(true)};
+        val
     }
 
     /// Returns `true` if no-edges covers the upper right rectangle of the matrix form.
