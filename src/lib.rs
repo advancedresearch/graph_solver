@@ -144,6 +144,7 @@ pub struct Graph {
     pub commute_quad: Option<bool>,
     cache_has_triangles: std::cell::Cell<bool>,
     cache_upper_triangle_disconnected: std::cell::Cell<bool>,
+    cache_commute_quad_satisfied: std::cell::Cell<bool>,
     cache_node_satisfied: Vec<std::cell::Cell<bool>>,
 }
 
@@ -154,6 +155,7 @@ impl Puzzle for Graph {
         if j <= i {self.edges[i][j] = val} else {self.edges[j][i] = val}
         self.cache_has_triangles.set(false);
         self.cache_upper_triangle_disconnected.set(false);
+        self.cache_commute_quad_satisfied.set(false);
         self.cache_node_satisfied[i].set(false);
         self.cache_node_satisfied[j].set(false);
     }
@@ -187,9 +189,9 @@ impl Puzzle for Graph {
         self.all_satisfied() &&
         self.pairs_satisfied() &&
         if self.no_triangles {!self.has_triangles()} else {true} &&
-        if self.meet_quad {self.meet_quad_satisfied()} else {true} &&
         if self.connected {self.is_connected()} else {true} &&
-        if let Some(val) = self.commute_quad {self.commute_quad_satisfied(val)} else {true}
+        if let Some(val) = self.commute_quad {self.commute_quad_satisfied(val)} else {true} &&
+        if self.meet_quad {self.meet_quad_satisfied()} else {true}
     }
     fn remove(&mut self, other: &Graph) {
         let n = self.nodes.len();
@@ -225,6 +227,7 @@ impl Graph {
             commute_quad: None,
             cache_has_triangles: std::cell::Cell::new(false),
             cache_upper_triangle_disconnected: std::cell::Cell::new(false),
+            cache_commute_quad_satisfied: std::cell::Cell::new(false),
             cache_node_satisfied: vec![],
         }
     }
@@ -422,6 +425,7 @@ impl Graph {
     ///
     /// For more information, see `Graph::commute`.
     pub fn commute_quad_satisfied(&self, commute: bool) -> bool {
+        if self.cache_commute_quad_satisfied.get() {return true};
         let n = self.nodes.len();
         for i in 0..n {
             for j in 0..n {
@@ -443,8 +447,13 @@ impl Graph {
                             } else {
                                 let ij = self.get((i, j));
                                 let jk = self.get((j, k));
-                                (ij ^ 1 == self.get((k, k2))) ^
-                                (jk ^ 1 == self.get((i, k2)))
+                                let kk2 = self.get((k, k2));
+                                let ik2 = self.get((i, k2));
+                                let x0 = (ij ^ 1) == kk2;
+                                let x1 = ij == kk2;
+                                let y0 = (jk ^ 1) == ik2;
+                                let y1 = jk == ik2;
+                                if (x0 ^ x1) && (y0 ^ y1) {x0 ^ y0} else {false}
                             };
                             if !s {return false}
                         } else if self.get((k, k2)) >= 2 &&
@@ -457,8 +466,13 @@ impl Graph {
                             } else {
                                 let ik = self.get((i, k));
                                 let ij = self.get((i, j));
-                                (ik ^ 1 == self.get((j, k2))) ^
-                                (ij ^ 1 == self.get((k, k2)))
+                                let jk2 = self.get((j, k2));
+                                let kk2 = self.get((k, k2));
+                                let x0 = (ik ^ 1) == jk2;
+                                let x1 = ik == jk2;
+                                let y0 = (ij ^ 1) == kk2;
+                                let y1 = ij == kk2;
+                                if (x0 ^ x1) && (y0 ^ y1) {x0 ^ y0} else {false}
                             };
                             if !s {return false}
                         }
@@ -466,6 +480,7 @@ impl Graph {
                 }
             }
         }
+        self.cache_commute_quad_satisfied.set(true);
         true
     }
 
@@ -520,6 +535,7 @@ impl Graph {
         if !self.nodes[i].self_connected && i == j {return vec![]};
         if self.no_triangles && self.has_triangles() {return vec![]};
         if self.connected && self.is_upper_right_disconnected() {return vec![]};
+        if let Some(val) = self.commute_quad {if !self.commute_quad_satisfied(val) {return vec![]}};
         let mut res = vec![];
         let errors = self.node_satisfied(i);
         let other_errors = self.node_satisfied(j);
