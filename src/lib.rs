@@ -99,8 +99,8 @@
 //! - Node and edge colors are represents as `u64`
 //! - A node color can be any value
 //! - Edge colors usually start with `2`
-//! - An edge color `0` is means no choice (neither empty or colored).
-//! - An edge color `1` is means empty
+//! - An edge color `0` means no choice (neither empty or colored).
+//! - An edge color `1` means empty
 
 pub use quickbacktrack::*;
 
